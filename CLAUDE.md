@@ -1,95 +1,349 @@
-# CLAUDE.md — AIRR‑ML‑25 Kaggle Project
+# CLAUDE.md — AIRR-ML-25 Competition Champion Framework
 
-## Project role
+> **Mission**: Win the AIRR-ML-25: Adaptive Immune Profiling Challenge 2025
+> **Deadline**: December 17, 2025 (06:59 UTC)
+> **Current Top Score**: 0.81364 (GROZD team)
+> **Target**: Score > 0.82 to secure 1st place ($5,000 + Nature Methods authorship)
 
-You are helping the user work on the **AIRR‑ML‑25: Adaptive Immune Profiling Challenge 2025** on Kaggle.  
-Your main jobs:
+---
 
-1. Build and iterate ML models that:
-   - (a) predict repertoire‑level immune state labels, and
-   - (b) identify label‑associated receptor sequences.
-2. Keep everything reproducible and competition‑safe (no leaking other people’s private code or data).
-3. Automate as much of the workflow as possible with Claude Code (bash, Python, MCP servers, and Skills).
+## 1. Competition Overview
 
-Assume the user is an expert in ML / telecom / neuroscience and comfortable with Python and Linux.
+### 1.1 Dual-Task Challenge
 
-## Tools you should use
+| Task | Description | Metric | Weight |
+|------|-------------|--------|--------|
+| **Task A** | Predict immune state (disease/healthy) for each repertoire | ROC-AUC | Part of weighted avg |
+| **Task B** | Identify top 50,000 label-associated receptor sequences per dataset | Jaccard Similarity | Part of weighted avg |
 
-Inside this repo, prefer these tools in roughly this order:
+### 1.2 Critical Numbers
 
-- **bash / shell**  
-  - File + directory inspection, Git operations, Kaggle CLI, running Python entrypoints.
-- **python**  
-  - Data loading, feature engineering, model training, cross‑validation, submission generation.
-- **MCP servers** (configured in `claude_mcp_config.json`):
-  - `filesystem`: read / write project files during refactors.
-  - `git`: inspect history and diffs; never push without explicit user request.
-  - `memory`: store high‑level plans, TODO lists, and experiment notes.
-- **Skills**  
-  - Use the custom `airr-ml25-research` Skill for domain‑specific reasoning and long‑term planning.
-  - Use marketplace Skills like `document-skills` for report drafting and PDF / docx handling when relevant.
+- **8** training datasets, **11** test datasets
+- **4,213** test repertoires to predict
+- **404,213** total submission rows (4,213 predictions + 8×50,000 sequences)
+- **19.94 GB** dataset size
+- **5 submissions/day** limit
 
-If a tool is missing or mis‑configured, propose concrete commands to install or fix it instead of guessing.
+### 1.3 Data Format
 
-## Project layout
+```
+train_datasets/
+├── train_dataset_1/
+│   ├── metadata.csv       # repertoire_id, filename, label_positive
+│   └── *.tsv              # junction_aa, v_call, j_call, [d_call, templates]
+└── train_dataset_{2-8}/
 
-Treat the repo as having this canonical structure:
+test_datasets/
+├── test_dataset_1/
+└── test_dataset_{2-11}/   # Some datasets have multiple test sets (e.g., 7_1, 7_2)
+```
 
-- `CLAUDE.md` — this file.
-- `README.md` — quickstart and high‑level overview.
-- `requirements.txt` — Python packages needed for local development.
-- `src/airr_ml25/`
-  - `config.py` — path handling and simple dataset config.
-  - `data.py` — loaders for metadata and repertoire files.
-  - `features.py` — feature extraction (k‑mers, V/J usage, simple stats).
-  - `models/baseline_logreg.py` — L1‑regularized logistic regression baseline.
-  - `submission.py` — helpers to turn predictions into a Kaggle‑compatible submission.
-- `notebooks/`
-  - `00_quick_eda.py` (or `.ipynb`) — EDA and sanity checks.
-- `docs/`
-  - `challenge_overview.md` — distilled version of competition rules and scoring.
-  - `data_format.md` — notes about metadata columns and sequence files.
-  - `model_roadmap.md` — research directions and experiment backlog.
-  - `mcp_and_skills.md` — how to wire MCP and Skills into this project.
-- `skills/airr-ml25-research/`
-  - `SKILL.md` — custom Skill for AIRR‑ML‑25 reasoning.
+---
 
-When adding new files, keep them inside `src/`, `notebooks/`, or `docs/` unless the user explicitly asks otherwise.
+## 2. Project Architecture
 
-## Coding style and practices
+### 2.1 Directory Structure
 
-- Use **Python 3.10+** and type hints where helpful.
-- Prefer **pandas** + **numpy** as the core data stack.
-- For models:
-  - Start with scikit‑learn (logistic regression, linear models, tree‑based methods).
-  - When proposing heavier models (XGBoost, LightGBM, transformers), clearly label them as optional and update `requirements.txt` only when the user agrees.
-- Follow these guidelines:
-  - Keep functions small and composable; avoid giant monolithic scripts.
-  - Add docstrings with argument and return type descriptions.
-  - Avoid hard‑coding absolute paths; always parameterize dataset locations.
+```
+airr-ml25-package/
+├── CLAUDE.md                    # This file - Claude's operating instructions
+├── main.py                      # Standalone baseline trainer
+├── requirements.txt             # Python dependencies
+├── kaggle.json                  # API credentials (DO NOT COMMIT TO PUBLIC)
+├── claude_mcp_config.json       # MCP server configuration
+│
+├── src/airr_ml25/               # Core Python package
+│   ├── config.py                # Path handling, dataset configuration
+│   ├── data.py                  # Data loaders for metadata and sequences
+│   ├── features.py              # Feature extraction (k-mers, V/J usage)
+│   ├── submission.py            # Submission file generation
+│   └── models/
+│       └── baseline_logreg.py   # L1-regularized logistic regression
+│
+├── notebooks/                   # EDA and experiments
+│   └── 00_quick_eda.py
+│
+├── docs/                        # Documentation hub
+│   ├── challenge_overview.md    # Competition rules digest
+│   ├── data_format.md           # Column specifications
+│   ├── model_roadmap.md         # Experiment backlog and results
+│   └── mcp_and_skills.md        # Integration notes
+│
+├── craw/                        # Crawled competition info
+│   ├── 01_Overview.md through 08_Submissions.md
+│   └── CLAUDE.md                # Additional context
+│
+├── skills/airr-ml25-research/   # Custom Skill for domain reasoning
+│   └── SKILL.md
+│
+├── data/                        # Dataset directory (gitignored)
+│   ├── train_datasets/
+│   └── test_datasets/
+│
+└── example-baseline-predictor-using-code-template.ipynb
+```
 
-## Kaggle‑specific constraints
+### 2.2 Key Entry Points
 
-- Never assume access to **internet** inside Kaggle kernels.
-- Always:
-  - Expose a single main entrypoint script (e.g. `python -m airr_ml25.submission ...`).
-  - Use **relative paths** rooted at `/kaggle/input/adaptive-immune-profiling-challenge-2025` (or a user‑passed root).
-  - Avoid writing large intermediate files to disk unless necessary; prefer in‑memory pipelines.
-- Do **not** copy‑paste other competitors’ code or proprietary model weights.  
-  Summarize ideas in your own words and implement them cleanly from scratch.
+```bash
+# Run main baseline
+python main.py --train_dir ./data/train_datasets/train_dataset_1 \
+               --test_dirs ./data/test_datasets/test_dataset_1 \
+               --out_dir ./results --n_jobs 4
 
-## How to use this project with Claude Code
+# Or use modular package
+python -m airr_ml25.submission --train-root ./data/train_datasets \
+                               --test-root ./data/test_datasets \
+                               --out-path ./submission.csv
+```
 
-1. **Clone the repo** to the dev machine (or Kaggle notebook environment).
-2. Open the folder in Claude Code.
-3. Ask Claude to:
-   - Inspect `docs/challenge_overview.md` and `docs/data_format.md`.
-   - Run `pip install -r requirements.txt`.
-   - Execute the baseline training flow:
-     - `python -m airr_ml25.submission --train_dir ... --test_dir ... --out_path submissions.csv`
-4. Iterate:
-   - Add features and models in `src/airr_ml25/`.
-   - Log experiments and insights into `docs/model_roadmap.md`.
-   - Use the `airr-ml25-research` Skill for deeper domain reasoning.
+---
 
-Always keep the user in the loop before making any destructive change (deleting files, force‑pushing Git branches, etc.).
+## 3. Operating Principles (For Claude)
+
+### 3.1 Long-Running Agent Best Practices
+
+Following Anthropic's [effective harnesses guide](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents):
+
+1. **One Feature at a Time**: Never attempt multiple major changes simultaneously
+2. **Incremental Progress**: Update `docs/model_roadmap.md` after each experiment
+3. **Clean State Handoffs**: Leave code documented and tests passing
+4. **Explicit Verification**: Always verify features work before marking complete
+
+### 3.2 Tool Use Strategy
+
+Following Anthropic's [advanced tool use guide](https://www.anthropic.com/engineering/advanced-tool-use):
+
+1. **Parallel Execution**: When reading multiple files or running independent tasks, batch them
+2. **Programmatic Orchestration**: For complex workflows, use Python scripts not manual tool calls
+3. **Error Prevention**: Validate inputs before expensive operations
+
+### 3.3 Priority Stack (Highest First)
+
+1. **Reproducibility**: Fixed seeds, documented splits, version-pinned dependencies
+2. **Cross-Dataset Generalization**: Leave-one-dataset-out validation > single-split CV
+3. **Scientific Insight**: Interpretable features that map to biology
+4. **Leaderboard Score**: Optimize only after 1-3 are satisfied
+
+### 3.4 Anti-Patterns to Avoid
+
+- Marking tasks complete without end-to-end testing
+- Overfitting to public leaderboard (different from private leaderboard)
+- Complex models before simple baselines are exhausted
+- Hard-coding paths (use config.py and CLI arguments)
+
+---
+
+## 4. MCP Server Configuration
+
+The project uses three MCP servers configured in `claude_mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "--root", "."]
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git", "--root", "."]
+    }
+  }
+}
+```
+
+### Usage Guidelines
+
+- **memory**: Store experiment summaries, TODO lists, key insights across sessions
+- **filesystem**: Read/write project files during refactoring
+- **git**: Inspect history and diffs; **never push without explicit user request**
+
+---
+
+## 5. Winning Strategy Roadmap
+
+### Phase 1: Foundation (Current)
+- [x] Project structure setup
+- [x] Baseline model (k-mer + L1 LogReg)
+- [ ] Download and validate dataset
+- [ ] Run baseline on all 8 datasets
+- [ ] First submission to establish baseline score
+
+### Phase 2: Feature Engineering
+- [ ] Multi-scale k-mers (k=3,4,5)
+- [ ] V/J gene usage patterns
+- [ ] VJ pair combinations
+- [ ] Clonality metrics (Shannon entropy, Gini, D50)
+- [ ] Public clonotypes (shared across individuals)
+- [ ] CDR3 length distribution statistics
+
+### Phase 3: Model Enhancement
+- [ ] XGBoost/LightGBM ensemble
+- [ ] Per-dataset models with ensemble
+- [ ] Dataset ID as feature (handle distribution shift)
+- [ ] Stratified cross-validation with dataset awareness
+
+### Phase 4: Sequence Identification (Task B)
+- [ ] Feature importance from trained models
+- [ ] K-mer to sequence mapping
+- [ ] SHAP values for interpretability
+- [ ] Motif clustering and deduplication
+
+### Phase 5: Advanced Techniques (If Time Permits)
+- [ ] Protein language model embeddings (ESM, ProtBERT)
+- [ ] Attention-based aggregation
+- [ ] Graph-based sequence similarity features
+
+---
+
+## 6. Submission Format Specification
+
+### Required Output Structure
+
+```csv
+ID,dataset,label_positive_probability,junction_aa,v_call,j_call
+rep_001,test_dataset_1,0.85,-999.0,-999.0,-999.0
+...                                                        # 4,213 prediction rows
+train_dataset_1_seq_top_1,train_dataset_1,-999.0,CASSLGQAY,TRBV20-1,TRBJ2-7
+...                                                        # 50,000 per dataset × 8
+```
+
+- **Missing values**: Use `-999.0` (Kaggle rejects NaN)
+- **Total rows**: Exactly 404,213
+- **ID format**: repertoire_id for predictions, custom for sequences
+
+---
+
+## 7. Code Template Compliance
+
+For prize eligibility and Nature Methods authorship, implement `ImmuneStatePredictor`:
+
+```python
+class ImmuneStatePredictor:
+    def __init__(self, n_jobs: int = 1, device: str = 'cpu', **kwargs):
+        pass
+
+    def fit(self, train_dir_path: str) -> 'ImmuneStatePredictor':
+        """Train on data in train_dir_path."""
+        pass
+
+    def predict_proba(self, test_dir_path: str) -> pd.DataFrame:
+        """Return DataFrame with columns: ID, dataset, label_positive_probability, ..."""
+        pass
+
+    def identify_associated_sequences(self, train_dir_path: str, top_k: int = 50000) -> pd.DataFrame:
+        """Return top_k important sequences."""
+        pass
+```
+
+**Run interface**:
+```bash
+python3 -m submission.main --train_dir ... --test_dir ... --out_dir ... --n_jobs 4 --device cpu
+```
+
+---
+
+## 8. Quick Commands
+
+### Dataset Operations
+```bash
+# Download competition data
+kaggle competitions download -c adaptive-immune-profiling-challenge-2025 -p ./data/
+
+# Extract
+cd data && unzip adaptive-immune-profiling-challenge-2025.zip && cd ..
+
+# Check data structure
+ls -la data/train_datasets/
+ls -la data/test_datasets/
+```
+
+### Development
+```bash
+# Setup environment
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run EDA
+python notebooks/00_quick_eda.py --train-root ./data/train_datasets
+
+# Run baseline
+python main.py --train_dir ./data/train_datasets/train_dataset_1 \
+               --test_dirs ./data/test_datasets/test_dataset_1 \
+               --out_dir ./results --n_jobs 4
+```
+
+### Submission
+```bash
+# Validate submission format
+python -c "import pandas as pd; df = pd.read_csv('submissions.csv'); print(df.shape, df.columns.tolist())"
+
+# Submit to Kaggle
+kaggle competitions submit -c adaptive-immune-profiling-challenge-2025 \
+                          -f submissions.csv -m "Experiment: description"
+```
+
+---
+
+## 9. Session Startup Checklist
+
+When starting a new session, Claude should:
+
+1. **Read current state**:
+   ```
+   - Check docs/model_roadmap.md for experiment history
+   - Run git log --oneline -10 for recent changes
+   - Review any running background tasks
+   ```
+
+2. **Verify environment**:
+   ```
+   - Check data/ directory exists and has expected structure
+   - Confirm Python environment is activated
+   - Validate requirements are installed
+   ```
+
+3. **Select next task**:
+   ```
+   - Review roadmap for next priority item
+   - Confirm understanding with user if ambiguous
+   - Create focused TODO list for session
+   ```
+
+---
+
+## 10. Key References
+
+### Competition Resources
+- [Official Overview](https://www.kaggle.com/competitions/adaptive-immune-profiling-challenge-2025/overview)
+- [Code Template Repo](https://github.com/uio-bmi/predict-airr)
+- [Pre-registered Protocol](https://github.com/uio-bmi/adaptive_immune_profiling_challenge_2025/blob/main/registered_report.pdf)
+
+### Domain Knowledge
+- [State-of-the-art in AIRR Mining](https://www.sciencedirect.com/science/article/pii/S2452310020300524)
+- [Modern Hopfield Networks for Repertoires](https://doi.org/10.1101/2020.04.12.038158)
+- [immuneML Platform](https://pmc.ncbi.nlm.nih.gov/articles/PMC10312379/)
+
+### Top Community Notebooks
+- [XGBoost Baseline](https://www.kaggle.com/code/bakuer30/air-ml25-xgboost) - 43 votes
+- [XGBoost + PCA](https://www.kaggle.com/code/jirkaborovec/airr-ml-25-naive-baseline-with-xgboost-pca) - 28 votes
+- [TabPFN Approach](https://www.kaggle.com/code/dkriuchkova/airrml25-tabpfn) - 4 votes
+
+---
+
+## 11. Safety and Compliance
+
+- **No data leakage**: Never use test labels or post-deadline information
+- **Open source requirement**: All winning code must be MIT licensed
+- **Original work**: Summarize ideas, implement from scratch
+- **Credentials security**: Never commit kaggle.json to public repos
+
+---
+
+*Last Updated: 2025-12-04*
+*Version: 2.0.0*

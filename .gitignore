@@ -1,0 +1,56 @@
+# Configuration files (may contain sensitive information)
+config/*.yml
+config/*.conf
+*.env
+*.env.*
+
+# Log files
+*.log
+logs/
+*.pcap
+
+# Docker volumes
+volumes/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Build artifacts
+build/
+dist/
+*.o
+*.so
+*.a
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+secrets/
+*.key
+*.pem
+credentials.json
+.claude/agents
+.claude/*
+
+kaggle.json
