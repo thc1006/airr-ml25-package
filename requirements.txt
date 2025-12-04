@@ -1,0 +1,7 @@
+pandas>=2.0
+numpy>=1.24
+scikit-learn>=1.3
+tqdm>=4.66
+
+# 可選：若要嘗試樹模型 / boosting，再自行解除註解
+# xgboost>=2.0
