@@ -47,10 +47,21 @@ test_datasets/
 ```
 airr-ml25-package/
 ├── CLAUDE.md                    # This file - Claude's operating instructions
-├── main.py                      # Standalone baseline trainer
+├── main.py                      # Standalone baseline trainer (official template)
 ├── requirements.txt             # Python dependencies
 ├── kaggle.json                  # API credentials (DO NOT COMMIT TO PUBLIC)
 ├── claude_mcp_config.json       # MCP server configuration
+│
+├── .claude/                     # Claude Code configuration
+│   ├── settings.json            # Permissions and environment
+│   ├── agents/                  # 15 specialized AI agents (see Section 12)
+│   │   ├── competition-master.md
+│   │   ├── data-scientist.md
+│   │   ├── ml-engineer.md
+│   │   └── ... (12 more)
+│   └── skills/                  # Custom skills (official location)
+│       └── airr-ml25-research/
+│           └── SKILL.md
 │
 ├── src/airr_ml25/               # Core Python package
 │   ├── config.py                # Path handling, dataset configuration
@@ -69,16 +80,13 @@ airr-ml25-package/
 │   ├── model_roadmap.md         # Experiment backlog and results
 │   └── mcp_and_skills.md        # Integration notes
 │
-├── craw/                        # Crawled competition info
-│   ├── 01_Overview.md through 08_Submissions.md
-│   └── CLAUDE.md                # Additional context
+├── craw/                        # Crawled competition info (8 .md files)
+│   └── 01_Overview.md ~ 08_Submissions.md
 │
-├── skills/airr-ml25-research/   # Custom Skill for domain reasoning
-│   └── SKILL.md
-│
-├── data/                        # Dataset directory (gitignored)
-│   ├── train_datasets/
-│   └── test_datasets/
+├── data/                        # Dataset directory (gitignored, ~19GB)
+│   ├── train_datasets/train_datasets/train_dataset_{1-8}/
+│   ├── test_datasets/test_datasets/test_dataset_{1-8_3}/
+│   └── sample_submissions.csv
 │
 └── example-baseline-predictor-using-code-template.ipynb
 ```
@@ -350,5 +358,102 @@ When starting a new session, Claude should:
 
 ---
 
+## 12. Available AI Agents (.claude/agents/)
+
+This project includes 15 specialized AI agents for different tasks. Invoke them proactively based on task type.
+
+### 12.1 Competition & Strategy Agents
+
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| **competition-master** | sonnet | Strategic orchestrator, risk management, submission planning | Daily progress review, submission strategy, agent coordination |
+| **ensemble-optimizer** | sonnet | WBF parameter tuning, file size optimization, model diversity | Ensemble combination testing, submission file optimization |
+
+### 12.2 Machine Learning Agents
+
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| **data-scientist** | sonnet | Statistical analysis, ML modeling, EDA, business insights | Data analysis, predictive modeling, A/B testing, customer analytics |
+| **ml-engineer** | sonnet | Production ML systems, PyTorch 2.x, model serving, feature engineering | Model deployment, inference optimization, ML infrastructure |
+| **mlops-engineer** | sonnet | ML pipelines, MLflow, Kubeflow, experiment tracking | Pipeline automation, model registry, cloud ML platforms |
+| **parallel-trainer** | sonnet | Multi-GPU orchestration, Docker container training, resource allocation | Mass training (30-50 models), parallel job management, GPU optimization |
+
+### 12.3 Data & Engineering Agents
+
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| **data-engineer** | sonnet | Data pipelines, Spark, dbt, Airflow, streaming architectures | ETL/ELT pipelines, data warehouse design, real-time streaming |
+
+### 12.4 Code Quality Agents
+
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| **code-reviewer** | sonnet | AI-powered code analysis, security vulnerabilities, performance review | Code quality assurance, security audit, PR review |
+| **python-pro** | sonnet | Python 3.12+, async programming, uv, ruff, modern patterns | Python development, optimization, advanced patterns |
+| **tdd-orchestrator** | sonnet | Test-driven development, red-green-refactor, test suite architecture | TDD implementation, test coverage, quality gates |
+
+### 12.5 Web Framework Agents
+
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| **django-pro** | sonnet | Django 5.x, async views, DRF, Celery, Django Channels | Django web apps, ORM optimization, Django patterns |
+| **fastapi-pro** | sonnet | FastAPI, SQLAlchemy 2.0, Pydantic V2, async APIs | FastAPI microservices, WebSocket, API architecture |
+
+### 12.6 Debugging & Operations Agents
+
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| **debugger** | sonnet | Root cause analysis, error diagnosis, minimal fixes | Any errors, test failures, unexpected behavior |
+| **error-detective** | haiku | Log parsing, stack trace analysis, error correlation | Log analysis, production error investigation |
+| **context-manager** | haiku | Dynamic context management, vector databases, knowledge graphs | Multi-agent coordination, RAG implementation, memory systems |
+
+### 12.7 Agent Invocation Examples
+
+```bash
+# For competition strategy
+# Use: competition-master, ensemble-optimizer
+
+# For feature engineering and modeling
+# Use: data-scientist → ml-engineer → mlops-engineer
+
+# For code quality
+# Use: python-pro → code-reviewer → tdd-orchestrator
+
+# For debugging
+# Use: debugger (simple) or error-detective (complex logs)
+```
+
+### 12.8 Agent Collaboration Patterns
+
+```
+Feature Development:
+  data-scientist (analyze) → ml-engineer (implement) → code-reviewer (review)
+
+Model Training Pipeline:
+  mlops-engineer (setup) → parallel-trainer (train) → ensemble-optimizer (optimize)
+
+Debugging Workflow:
+  error-detective (find patterns) → debugger (fix root cause) → tdd-orchestrator (add tests)
+```
+
+---
+
+## 13. Skills (.claude/skills/)
+
+### 13.1 Custom Skills
+
+| Skill | Location | Purpose |
+|-------|----------|---------|
+| **airr-ml25-research** | `.claude/skills/airr-ml25-research/SKILL.md` | Domain-specific reasoning for AIRR-ML-25 competition |
+
+### 13.2 Skills vs Agents
+
+- **Skills**: Domain knowledge and reasoning frameworks (declarative)
+- **Agents**: Action-oriented specialists for specific tasks (imperative)
+
+Use skills when you need deep domain context; use agents when you need specialized task execution.
+
+---
+
 *Last Updated: 2025-12-04*
-*Version: 2.0.0*
+*Version: 2.1.0*

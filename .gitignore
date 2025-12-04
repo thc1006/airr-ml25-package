@@ -50,10 +50,13 @@ secrets/
 *.key
 *.pem
 credentials.json
-.claude/agents
-.claude/*
-
 kaggle.json
+
+# Claude Code configuration
+.claude/agents/         # User-specific agents (private)
+.claude/settings.json   # Local settings
+!.claude/skills/        # Project skills (tracked)
+.venv/                  # Virtual environment
 
 # Competition data (too large for git)
 data/
