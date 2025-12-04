@@ -54,3 +54,8 @@ credentials.json
 .claude/*
 
 kaggle.json
+
+# Competition data (too large for git)
+data/
+*.zip
+results/

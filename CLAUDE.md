@@ -136,7 +136,7 @@ Following Anthropic's [advanced tool use guide](https://www.anthropic.com/engine
 
 ## 4. MCP Server Configuration
 
-The project uses three MCP servers configured in `claude_mcp_config.json`:
+The project uses four MCP servers configured in `claude_mcp_config.json`:
 
 ```json
 {
@@ -152,6 +152,10 @@ The project uses three MCP servers configured in `claude_mcp_config.json`:
     "git": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-git", "--root", "."]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }
@@ -162,6 +166,7 @@ The project uses three MCP servers configured in `claude_mcp_config.json`:
 - **memory**: Store experiment summaries, TODO lists, key insights across sessions
 - **filesystem**: Read/write project files during refactoring
 - **git**: Inspect history and diffs; **never push without explicit user request**
+- **playwright**: Browser automation for web scraping, testing, and data collection
 
 ---
 
