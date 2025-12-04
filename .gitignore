@@ -62,3 +62,4 @@ kaggle.json
 data/
 *.zip
 results/
+.claude/agents/*
