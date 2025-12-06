@@ -61,7 +61,11 @@ claude_mcp_config.json  # MCP server config (private)
 # Competition data (too large for git)
 data/
 *.zip
+
+# Output directories (results, submissions, logs)
+outputs/
 results/
+results_*/
 
 # Archive (old experiments and results)
 archive/
