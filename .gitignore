@@ -52,14 +52,30 @@ secrets/
 credentials.json
 kaggle.json
 
-# Claude Code configuration
-.claude/agents/         # User-specific agents (private)
-.claude/settings.json   # Local settings
-!.claude/skills/        # Project skills (tracked)
+# Claude Code configuration (private, never push to remote)
+.claude/                # All Claude config is private
+CLAUDE.md               # Claude instructions (private)
+claude_mcp_config.json  # MCP server config (private)
 .venv/                  # Virtual environment
 
 # Competition data (too large for git)
 data/
 *.zip
 results/
-.claude/agents/*
+
+# Archive (old experiments and results)
+archive/
+
+# Temporary model files
+catboost_info/
+*.catboost
+*.cbm
+
+# Temporary analysis files
+ANALYSIS_REPORT.md
+CHAMPIONSHIP_PLAN.md
+final_submission.csv
+
+# Submission files (private)
+*_submission.csv
+submission*.csv
