@@ -1,23 +1,41 @@
-# Core dependencies
+# =============================================================================
+# AIRR-ML-25 GPU Champion Requirements
+# =============================================================================
+# Target: RTX 5080 (16GB VRAM) + CUDA 12.x
+
+# Core ML
 pandas>=2.0
 numpy>=1.24
 scikit-learn>=1.3
+scipy>=1.11
+
+# GPU Acceleration (RAPIDS)
+--extra-index-url https://pypi.nvidia.com
+cudf-cu12>=24.10
+cuml-cu12>=24.10
+cupy-cuda12x>=13.0
+
+# Deep Learning
+torch>=2.0
+torchvision>=0.15
+fair-esm>=2.0
+
+# Gradient Boosting with GPU
+xgboost>=2.0
+lightgbm>=4.0
+catboost>=1.2
+
+# Optimization
+optuna>=3.0
+
+# Utilities
 tqdm>=4.66
 joblib>=1.3
 numba>=0.58
 pyarrow>=14.0
 
-# Gradient Boosting (GPU-enabled)
-xgboost>=2.0
-lightgbm>=4.0
-catboost>=1.2
-
-# Deep Learning
-torch>=2.0
-torchvision>=0.15
-
-# Optimization
-optuna>=3.0
+# Protein sequence processing
+biopython>=1.81
 
 # Testing
 pytest>=7.0
@@ -25,6 +43,3 @@ pytest-cov>=4.0
 
 # Logging
 loguru>=0.7
-
-# Optional: RAPIDS cuML (install separately)
-# cuml-cu12>=24.0
