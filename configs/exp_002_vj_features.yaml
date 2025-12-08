@@ -1,0 +1,88 @@
+# Experiment 002: Add V/J gene features
+# Expected improvement: +0.02-0.03 AUC
+
+experiment:
+  name: exp_002_vj_features
+  description: "Multi-scale k-mer + V/J gene usage features"
+  author: "Competition Master"
+  date: "2025-12-08"
+
+data:
+  train_root: "./data/train_datasets"
+  test_root: "./data/test_datasets"
+  datasets: [1, 2, 3, 4, 5, 6, 7, 8]
+
+features:
+  type: "combined"
+
+  # K-mer features (from exp_001)
+  kmer:
+    k_values: [3, 4, 5]
+    use_tfidf: true
+    max_features: null
+    min_df: 2
+    sublinear_tf: true
+
+  # V/J gene features (NEW)
+  vj_gene:
+    v_gene:
+      type: "frequency"  # frequency, one_hot, or count
+      top_n: 100  # 只保留最常見的 100 個 V gene
+      normalize: true
+    j_gene:
+      type: "frequency"
+      top_n: 20
+      normalize: true
+    vj_pair:
+      type: "frequency"
+      top_n: 500  # VJ pair combinations
+      normalize: true
+    gene_family:
+      aggregate_by_family: true  # TRBV1, TRBV2, etc.
+
+  # Basic features
+  basic:
+    - seq_count
+    - total_count
+    - unique_ratio
+    - cdr3_length_mean
+    - cdr3_length_std
+
+model:
+  type: "xgboost"
+  xgboost:
+    n_estimators: 300
+    max_depth: 7  # 增加深度以處理更多特徵
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    tree_method: "gpu_hist"
+    gpu_id: 0
+    predictor: "gpu_predictor"
+    eval_metric: "auc"
+    reg_alpha: 0.1  # L1 regularization
+    reg_lambda: 1.0  # L2 regularization
+
+  per_dataset: true
+
+training:
+  cv:
+    method: "stratified_kfold"
+    n_splits: 5
+    random_state: 42
+  early_stopping_rounds: 50
+  verbose_eval: 50
+
+task_b:
+  method: "combined"  # k-mer + V/J gene importance
+  top_k: 50000
+  aggregation: "weighted_sum"
+  weights:
+    kmer: 0.7
+    vj_gene: 0.3
+
+output:
+  model_path: "models/xgboost_k345_vj.pkl"
+  submission_path: "outputs/submission.csv"
+  save_predictions: true
+  save_feature_importance: true

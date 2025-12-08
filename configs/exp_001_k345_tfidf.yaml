@@ -1,0 +1,68 @@
+# Experiment 001: Multi-scale k-mer (k=3,4,5) with TF-IDF
+# Expected improvement: +0.03-0.05 AUC
+
+experiment:
+  name: exp_001_k345_tfidf
+  description: "Multi-scale k-mer features (k=3,4,5) with TF-IDF weighting"
+  author: "Competition Master"
+  date: "2025-12-08"
+
+data:
+  train_root: "./data/train_datasets"
+  test_root: "./data/test_datasets"
+  datasets: [1, 2, 3, 4, 5, 6, 7, 8]
+
+features:
+  type: "kmer"
+  kmer:
+    k_values: [3, 4, 5]
+    use_tfidf: true
+    max_features: null  # 使用所有 k-mer
+    min_df: 2  # 至少在 2 個 repertoire 出現
+    sublinear_tf: true  # 使用 log(1 + tf)
+
+  # 額外的基本特徵
+  basic:
+    - seq_count
+    - total_count
+    - unique_ratio
+    - cdr3_length_mean
+    - cdr3_length_std
+
+model:
+  type: "xgboost"
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    tree_method: "gpu_hist"  # GPU 加速
+    gpu_id: 0
+    predictor: "gpu_predictor"
+    eval_metric: "auc"
+
+  # Per-dataset training
+  per_dataset: true
+
+training:
+  # Cross-validation
+  cv:
+    method: "stratified_kfold"
+    n_splits: 5
+    random_state: 42
+
+  # Early stopping
+  early_stopping_rounds: 50
+  verbose_eval: 50
+
+task_b:
+  # 序列選擇策略
+  method: "kmer_importance"
+  top_k: 50000
+  aggregation: "max"  # 使用最高的 k-mer importance
+
+output:
+  model_path: "models/xgboost_k345.pkl"
+  submission_path: "outputs/submission.csv"
+  save_predictions: true

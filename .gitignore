@@ -84,3 +84,4 @@ final_submission.csv
 # Submission files (private)
 *_submission.csv
 submission*.csv
+best_model.pth

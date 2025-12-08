@@ -451,7 +451,7 @@ class ImmuneStatePredictor:
         print(f"Training on: {train_dir_path}")
 
         # Load and encode k-mers
-        X_train_df, y_train_df = load_and_encode_kmers(train_dir_path, k=3)
+        X_train_df, y_train_df = load_and_encode_kmers(train_dir_path, k=4)
 
         # Prepare aligned data
         X_train, y_train, train_ids = prepare_data(
@@ -489,7 +489,7 @@ class ImmuneStatePredictor:
             raise RuntimeError("Model not fitted. Call fit() first.")
 
         # Load and encode test data
-        X_test_df, _ = load_and_encode_kmers(test_dir_path, k=3)
+        X_test_df, _ = load_and_encode_kmers(test_dir_path, k=4)
 
         # Align features with training
         if self.model.feature_names_ is not None:

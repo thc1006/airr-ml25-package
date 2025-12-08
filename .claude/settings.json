@@ -1,0 +1,22 @@
+{
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Edit(*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(./scripts/build_*)",
+      "Bash(./scripts/run_*)",
+      "Bash(uhd_find_devices)"
+    ],
+    "deny": [
+      "Read(./secrets/**)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1"
+  },
+  "enabledMcpjsonServers": ["memory", "filesystem", "sequential-thinking"]
+}
