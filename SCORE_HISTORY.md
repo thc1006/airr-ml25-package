@@ -107,5 +107,91 @@
 
 ---
 
-**最後更新**: 2025-12-08 10:00
-**下一步行動**: 提交 Enhanced v2 到 Kaggle 並記錄分數
+## 🚀 Priority 3: 深度學習冠軍衝刺
+
+### Championship Deep Learning Pipeline (ESM-2 + Attention) - v2 (修復版)
+
+#### 🔧 訓練歷史
+
+**第一次嘗試** (2025-12-08 11:27 UTC)
+- ❌ **失敗**: 在 Dataset 8 時崩潰
+- **錯誤 1**: `TypeError: ReduceLROnPlateau.__init__() got an unexpected keyword argument 'verbose'`
+- **錯誤 2**: `ValueError: Input contains NaN`
+
+**修復措施** (2025-12-09 15:50 UTC)
+- ✅ 移除 `ReduceLROnPlateau` 的 `verbose=True` 參數（PyTorch 版本相容性）
+- ✅ 實作完整的 NaN 處理機制：
+  - `extract_clonality_features()`: 使用 `dropna()` 並檢查 NaN/inf
+  - `standardize_features()`: 在賦值前驗證 NaN/inf
+  - `extract_features_from_repertoire()`: 將 NaN 替換為 0.0
+- ✅ 記憶體優化：
+  - ESM-2 batch_size: 32 → 16
+  - DataLoader batch_size: 8 → 4
+  - num_workers: 4 → 2
+  - 混合精度訓練 (FP16/FP32)
+  - 定期 GPU cache 清理
+
+**第二次嘗試** (2025-12-09 15:50 UTC) ❌ **已停止 (16:05 UTC)**
+- 運行 15 分鐘後停止以實作多核心優化
+- Dataset 1 進度: 94% (375/400 repertoires)
+
+**第三次嘗試 - 多核心優化版** (2025-12-09 16:09 UTC) ❌ **Dataset 8 崩潰**
+- 在 Dataset 8 ESM-2 處理階段崩潰（約 48% 進度）
+
+**第四次嘗試 - 自動監控版** (2025-12-09 22:54 UTC) ✅ **運行中**
+- **開始時間**: 2025-12-09 22:54 UTC
+- **狀態**: 🔄 **訓練中** - Phase 1: Dataset 1 ESM-2 編碼
+- **監控系統**: `auto_watchdog.py` 運行中
+  - 自動檢測崩潰並重啟（最多 5 次）
+  - 每 60 秒監控一次
+  - 日誌: `logs/watchdog.log`
+- **訓練日誌**: `logs/auto_train_20251209_225446.log`
+- **GPU 狀態**: 91% 使用率, 2986 MB, 60°C
+- **預計完成**: 18-26 小時（8-fold CV）
+- **目標分數**: **0.82+** → 擊敗 GROZD (0.81364) 奪冠
+
+#### 架構設計
+- **ESM-2**: 650M 參數蛋白質語言模型（Meta AI）
+- **Attention**: Multi-head attention (4 heads) 聚合可變長度 repertoires
+- **Hybrid Features**:
+  - 深度學習 embeddings (1280-dim)
+  - 傳統特徵 (~389-dim): V/J usage, VJ pairs, clonality, CDR3 length
+- **訓練策略**: Leave-one-dataset-out CV（8 folds）
+
+#### 訓練性能（即時）
+- 🚀 **GPU 使用率**: 90% (RTX 5080 16GB)
+- 💾 **GPU 記憶體**: 2.9 GB / 15.9 GB (18%)
+- 🌡️ **GPU 溫度**: 59°C ← 更低更穩定
+- ⚡ **處理速度**:
+  - Traditional Features: **56 repertoires/秒** (105x 加速) 🔥
+  - ESM-2 Embeddings: ~1.98 秒/repertoire
+- 📝 **日誌檔案**: `logs/auto_train_20251209_160908.log`
+- 🆔 **PID**: 3405016
+
+#### 監控指令
+```bash
+# 查看訓練進度
+tail -f ./logs/auto_train_20251209_225446.log
+
+# 查看監控系統狀態
+tail -f ./logs/watchdog.log
+
+# 查看 GPU 使用狀況
+watch -n 1 nvidia-smi
+
+# 檢查進程狀態
+pgrep -af "championship|watchdog"
+```
+
+#### 預期結果
+- **Cross-Validation AUC**: 0.75-0.82 (目標 > 0.80)
+- **Public Leaderboard**: 預期達到 Top 3（> 0.78）
+- **Private Leaderboard**: 衝擊第 1 名（> 0.81364）
+
+---
+
+**最後更新**: 2025-12-09 22:56 UTC
+**當前狀態**: Priority 3 深度學習訓練進行中（v4 自動監控版）
+**自動化系統**: `auto_watchdog.py` 運行中，自動處理崩潰並重啟
+**優化亮點**: Traditional features 處理加速 **105倍**（2.1s → 0.018s per repertoire）
+**下一步行動**: 等待訓練完成（18-26 小時）→ 提交 Kaggle → 記錄分數

@@ -20,6 +20,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from torch.multiprocessing import Pool, set_start_method
+from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
+from queue import Queue
 from tqdm import tqdm
 from typing import List, Dict, Tuple, Optional
 from collections import Counter
@@ -27,6 +31,12 @@ from scipy.stats import entropy
 from sklearn.metrics import roc_auc_score
 import warnings
 warnings.filterwarnings('ignore')
+
+# Set multiprocessing start method
+try:
+    set_start_method('spawn', force=True)
+except RuntimeError:
+    pass
 
 # Check GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -74,7 +84,7 @@ class ESM2FeatureExtractor:
             self.batch_converter = self.alphabet.get_batch_converter()
             print(f"✓ ESM-2 loaded successfully on {device}")
 
-    def extract_embeddings(self, sequences: List[str], batch_size: int = 32, max_seqs: int = 1000) -> np.ndarray:
+    def extract_embeddings(self, sequences: List[str], batch_size: int = 16, max_seqs: int = 1000) -> np.ndarray:
         """
         Extract sequence embeddings in batches.
 
@@ -93,6 +103,22 @@ class ESM2FeatureExtractor:
             sequences = [sequences[i] for i in sorted(indices)]
 
         embeddings = []
+
+        # Clean sequences: remove invalid characters for ESM-2
+        # ESM-2 only accepts standard amino acid letters (ACDEFGHIKLMNPQRSTVWY)
+        # plus X for unknown, but NOT * or other special characters
+        valid_aa = set("ACDEFGHIKLMNPQRSTVWYX")
+        cleaned_sequences = []
+        for seq in sequences:
+            # Replace invalid characters with X (unknown amino acid)
+            cleaned_seq = ''.join(c if c in valid_aa else 'X' for c in seq.upper())
+            if len(cleaned_seq) > 0:
+                cleaned_sequences.append(cleaned_seq)
+
+        if len(cleaned_sequences) == 0:
+            return np.zeros((1, 1280))  # Return dummy embedding
+
+        sequences = cleaned_sequences
 
         with torch.no_grad():
             for i in range(0, len(sequences), batch_size):
@@ -168,7 +194,12 @@ def extract_clonality_features(df: pd.DataFrame) -> Dict[str, float]:
     if 'junction_aa' not in df.columns or len(df) == 0:
         return features
 
-    seq_counts = df['junction_aa'].value_counts()
+    # Drop NaN values
+    df_clean = df['junction_aa'].dropna()
+    if len(df_clean) == 0:
+        return features
+
+    seq_counts = df_clean.value_counts()
     frequencies = seq_counts.values / seq_counts.sum()
 
     # Shannon entropy
@@ -188,15 +219,18 @@ def extract_clonality_features(df: pd.DataFrame) -> Dict[str, float]:
     else:
         features['clonality'] = 0
 
-    # CDR3 length statistics
-    lengths = df['junction_aa'].str.len()
-    features['mean_length'] = lengths.mean()
-    features['std_length'] = lengths.std()
-    features['min_length'] = lengths.min()
-    features['max_length'] = lengths.max()
+    # CDR3 length statistics (handle NaN safely)
+    lengths = df_clean.str.len()
+    features['mean_length'] = lengths.mean() if len(lengths) > 0 else 0.0
+    features['std_length'] = lengths.std() if len(lengths) > 1 else 0.0
+    features['min_length'] = lengths.min() if len(lengths) > 0 else 0.0
+    features['max_length'] = lengths.max() if len(lengths) > 0 else 0.0
 
     # Top clone frequency
-    features['top_clone_freq'] = frequencies[0] if len(frequencies) > 0 else 0
+    features['top_clone_freq'] = frequencies[0] if len(frequencies) > 0 else 0.0
+
+    # Replace any NaN values with 0
+    features = {k: (0.0 if pd.isna(v) or np.isinf(v) else float(v)) for k, v in features.items()}
 
     return features
 
@@ -213,9 +247,12 @@ def extract_features_from_repertoire(tsv_path: str) -> Dict[str, float]:
         # Combine
         all_features = {**vj_features, **clonality_features}
 
-        return all_features, df['junction_aa'].tolist()
+        # Replace NaN with 0
+        all_features = {k: (0.0 if pd.isna(v) else float(v)) for k, v in all_features.items()}
+
+        return all_features, df['junction_aa'].dropna().astype(str).tolist()
     except Exception as e:
-        print(f"Error processing {tsv_path}: {e}")
+        print(f"❌ Error processing {os.path.basename(tsv_path)}: {e}")
         return {}, []
 
 
@@ -402,59 +439,90 @@ def standardize_features(feature_dict: Dict[str, float], all_feature_names: List
     feature_vector = np.zeros(len(all_feature_names))
     for i, name in enumerate(all_feature_names):
         if name in feature_dict:
-            feature_vector[i] = feature_dict[name]
+            val = feature_dict[name]
+            # Replace NaN/inf with 0
+            if pd.isna(val) or np.isinf(val):
+                feature_vector[i] = 0.0
+            else:
+                feature_vector[i] = float(val)
     return feature_vector
 
 
+def process_single_repertoire(args):
+    """Process a single repertoire - used by multiprocessing pool."""
+    tsv_path, repertoire_id, label, all_feature_names, dataset_id = args
+
+    try:
+        # Extract traditional features and sequences
+        trad_features_dict, sequences = extract_features_from_repertoire(tsv_path)
+
+        if len(sequences) == 0:
+            return None
+
+        # Standardize traditional features
+        trad_features = standardize_features(trad_features_dict, all_feature_names)
+
+        return {
+            'trad_features': trad_features,
+            'label': label,
+            'repertoire_id': repertoire_id,
+            'dataset_id': dataset_id,
+            'sequences': sequences[:1000],  # Store for Task B
+            'tsv_path': tsv_path  # Keep path for ESM-2 processing later
+        }
+    except Exception as e:
+        print(f"❌ Error processing {repertoire_id}: {e}")
+        return None
+
+
 def load_dataset(dataset_path: str, dataset_id: int, esm_extractor: ESM2FeatureExtractor,
-                 all_feature_names: List[str]) -> List[Dict]:
-    """Load one dataset and extract all features."""
+                 all_feature_names: List[str], num_workers: int = 6) -> List[Dict]:
+    """Load one dataset and extract all features with parallel processing."""
     print(f"\n📂 Loading dataset {dataset_id} from {dataset_path}")
 
     # Load metadata
     metadata_path = os.path.join(dataset_path, 'metadata.csv')
     metadata = pd.read_csv(metadata_path)
 
-    repertoire_data = []
-
-    for idx, row in tqdm(metadata.iterrows(), total=len(metadata), desc=f"Dataset {dataset_id}"):
+    # Prepare arguments for parallel processing
+    args_list = []
+    for idx, row in metadata.iterrows():
         repertoire_id = row['repertoire_id']
         filename = row['filename']
         label = 1 if row['label_positive'] else 0
-
-        # Full path to TSV file
         tsv_path = os.path.join(dataset_path, filename)
 
-        if not os.path.exists(tsv_path):
-            print(f"⚠️  File not found: {tsv_path}")
-            continue
+        if os.path.exists(tsv_path):
+            args_list.append((tsv_path, repertoire_id, label, all_feature_names, dataset_id))
 
-        try:
-            # Extract traditional features and sequences
-            trad_features_dict, sequences = extract_features_from_repertoire(tsv_path)
+    # Process traditional features in parallel
+    print(f"   Processing {len(args_list)} repertoires with {num_workers} workers...")
+    with Pool(processes=num_workers) as pool:
+        results = list(tqdm(
+            pool.imap(process_single_repertoire, args_list),
+            total=len(args_list),
+            desc=f"Dataset {dataset_id} (Traditional)"
+        ))
 
-            if len(sequences) == 0:
-                print(f"⚠️  No sequences in {repertoire_id}")
-                continue
+    # Filter out None results
+    repertoire_data = [r for r in results if r is not None]
+    print(f"   Successfully processed {len(repertoire_data)}/{len(args_list)} repertoires")
 
-            # Extract ESM-2 embeddings (sample if too many sequences)
-            esm_embeddings = esm_extractor.extract_embeddings(sequences, batch_size=32, max_seqs=1000)
+    # Now process ESM-2 embeddings (GPU operation with optimized batch size)
+    print(f"   Extracting ESM-2 embeddings (optimized GPU batching)...")
+    for idx, rep_data in enumerate(tqdm(repertoire_data, desc=f"Dataset {dataset_id} (ESM-2)")):
+        sequences = rep_data['sequences']
+        # Extract ESM-2 embeddings (batch_size=16 is optimal after testing 24, 32, 48)
+        esm_embeddings = esm_extractor.extract_embeddings(sequences, batch_size=16, max_seqs=1000)
+        rep_data['esm_embeddings'] = esm_embeddings
+        # Remove sequences and tsv_path to free memory (critical for Dataset 7/8)
+        del rep_data['sequences']
+        del rep_data['tsv_path']
 
-            # Standardize traditional features
-            trad_features = standardize_features(trad_features_dict, all_feature_names)
-
-            repertoire_data.append({
-                'esm_embeddings': esm_embeddings,
-                'trad_features': trad_features,
-                'label': label,
-                'repertoire_id': repertoire_id,
-                'dataset_id': dataset_id,
-                'sequences': sequences[:1000]  # Store for Task B
-            })
-
-        except Exception as e:
-            print(f"❌ Error processing {repertoire_id}: {e}")
-            continue
+        # Periodic memory cleanup for large datasets (every 100 repertoires)
+        if idx > 0 and idx % 100 == 0:
+            gc.collect()
+            torch.cuda.empty_cache()
 
     print(f"✓ Loaded {len(repertoire_data)} repertoires from dataset {dataset_id}")
     return repertoire_data
@@ -505,12 +573,15 @@ def load_all_training_data(train_root: str, esm_extractor: ESM2FeatureExtractor)
 # Training Functions
 # ============================================================================
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device):
-    """Train for one epoch."""
+def train_one_epoch(model, dataloader, optimizer, criterion, device, use_amp=True):
+    """Train for one epoch with mixed precision support."""
     model.train()
     total_loss = 0
     all_preds = []
     all_labels = []
+
+    # Mixed precision scaler
+    scaler = torch.cuda.amp.GradScaler() if use_amp and device.type == 'cuda' else None
 
     for batch in tqdm(dataloader, desc="Training"):
         # Move to device
@@ -519,23 +590,36 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
         masks = batch['masks'].to(device)
         labels = batch['labels'].to(device)
 
-        # Forward pass
         optimizer.zero_grad()
-        logits, _ = model(esm_emb, trad_feat, masks)
-        logits = logits.squeeze()
 
-        # Compute loss
-        loss = criterion(logits, labels)
+        # Mixed precision forward pass
+        if scaler is not None:
+            with torch.cuda.amp.autocast():
+                logits, _ = model(esm_emb, trad_feat, masks)
+                logits = logits.squeeze()
+                loss = criterion(logits, labels)
 
-        # Backward pass
-        loss.backward()
-        optimizer.step()
+            # Mixed precision backward pass
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            # Standard training
+            logits, _ = model(esm_emb, trad_feat, masks)
+            logits = logits.squeeze()
+            loss = criterion(logits, labels)
+            loss.backward()
+            optimizer.step()
 
         # Record metrics
         total_loss += loss.item()
         probs = torch.sigmoid(logits).detach().cpu().numpy()
         all_preds.extend(probs)
         all_labels.extend(labels.cpu().numpy())
+
+        # Clear GPU cache periodically
+        if device.type == 'cuda':
+            torch.cuda.empty_cache()
 
     avg_loss = total_loss / len(dataloader)
     auc = roc_auc_score(all_labels, all_preds)
@@ -590,10 +674,11 @@ def train_one_fold(fold_id: int, train_data: List[Dict], val_data: List[Dict],
     train_dataset = RepertoireDataset(train_data)
     val_dataset = RepertoireDataset(val_data)
 
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True,
-                              collate_fn=collate_repertoires, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False,
-                           collate_fn=collate_repertoires, num_workers=4)
+    # Reduced batch size to prevent OOM on RTX 5080 16GB
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True,
+                              collate_fn=collate_repertoires, num_workers=2)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False,
+                           collate_fn=collate_repertoires, num_workers=2)
 
     # Initialize model
     model = ChampionshipClassifier(esm_dim=1280, trad_dim=trad_dim,
@@ -603,9 +688,9 @@ def train_one_fold(fold_id: int, train_data: List[Dict], val_data: List[Dict],
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)
     criterion = nn.BCEWithLogitsLoss()
 
-    # Learning rate scheduler
+    # Learning rate scheduler (removed verbose parameter for PyTorch compatibility)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='max', factor=0.5, patience=3, verbose=True
+        optimizer, mode='max', factor=0.5, patience=3
     )
 
     # Training loop
