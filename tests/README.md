@@ -459,6 +459,6 @@ make cov-summary
 
 ---
 
-**Last Updated:** 2024-12-17
+**Last Updated:** 2025-12-17
 **Version:** 1.0
 **Maintainer:** AIRR-ML-25 Team
