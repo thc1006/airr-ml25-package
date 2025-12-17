@@ -1,0 +1,178 @@
+name: Champion V13 Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-timeout pytest-xdist
+
+    - name: Run unit tests
+      run: |
+        pytest tests/ -m "unit and not gpu" \
+          --cov=champion_v13 \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          -v
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-timeout
+
+    - name: Run integration tests
+      run: |
+        pytest tests/ -m "integration and not gpu and not slow" -v
+
+  gpu-test:
+    name: GPU Tests
+    runs-on: self-hosted  # Requires self-hosted runner with GPU
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-timeout
+
+    - name: Check GPU availability
+      run: |
+        nvidia-smi
+        python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+
+    - name: Run GPU tests
+      run: |
+        pytest tests/ -m "gpu and not slow" -v
+
+    - name: Run GPU performance tests
+      run: |
+        pytest tests/ -m "gpu and performance" -v --durations=0
+
+  performance-test:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-timeout psutil
+
+    - name: Run performance benchmarks
+      run: |
+        pytest tests/ -m "performance and not gpu" --durations=0 -v
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff black isort mypy
+
+    - name: Run ruff
+      run: ruff check . --output-format=github
+
+    - name: Run black
+      run: black --check .
+
+    - name: Run isort
+      run: isort --check-only .
+
+    - name: Run mypy
+      run: mypy champion_v13*.py --ignore-missing-imports
+      continue-on-error: true
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test, integration-test]
+    if: always()
+
+    steps:
+    - name: Check test results
+      run: |
+        echo "Unit tests: ${{ needs.test.result }}"
+        echo "Integration tests: ${{ needs.integration-test.result }}"
+
+    - name: Update status
+      if: needs.test.result != 'success' || needs.integration-test.result != 'success'
+      run: exit 1

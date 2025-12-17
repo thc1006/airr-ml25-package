@@ -1,87 +1,161 @@
-# Configuration files (may contain sensitive information)
-config/*.yml
-config/*.conf
+# ============================================
+# AIRR-ML-25 Competition Project .gitignore
+# ============================================
+
+# ===== Sensitive Information =====
+# Kaggle API credentials
+kaggle.json
+credentials.json
+
+# Environment variables
 *.env
 *.env.*
 
-# Log files
+# SSH keys and certificates
+*.key
+*.pem
+secrets/
+
+# Private configuration files
+.claude/
+.kaggle.json
+kaggle.json
+
+# ===== Competition Data =====
+# Dataset (19GB+ total)
+data/
+*.zip
+*.tar.gz
+*.h5ad
+*.h5
+
+# Kaggle sample submissions
+sample_submissions.csv
+
+# ===== Training Artifacts =====
+# Model checkpoints and weights
+checkpoints/
+checkpoints_*/
+cache/
+cache_*/
+models/
+*.pth
+*.pt
+*.ckpt
+*.pkl
+*.joblib
+*.catboost
+*.cbm
+
+# Training logs and info
+catboost_info/
+tensorboard_logs/
+mlruns/
+wandb/
+
+# ===== Submission Files =====
+# Keep only best submissions in git
+# All other submissions are ignored
+submissions/archive/
+*_submission*.csv
+submission*.csv
+quick_submission.csv
+sample_submissions.csv
+# Exception: Allow best submissions
+!submissions/v8_submission_fixed.csv
+!submissions/best_submissions/*.csv
+
+# ===== Large Files (>100MB) =====
+# Automatically ignore files larger than 100MB
+*.csv
+# But allow small CSVs in specific directories
+!src/**/*.csv
+!tests/**/*.csv
+!docs/**/*.csv
+
+# ===== Output Directories =====
+outputs/
+results/
+results_*/
+experiments_output/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+virtualenv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== IDE & Editors =====
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ===== Logs =====
 *.log
 logs/
 *.pcap
 
-# Docker volumes
-volumes/
-
-# Temporary files
+# ===== Temporary Files =====
 *.tmp
-*.swp
-*~
+*.temp
+.cache/
 
-# Build artifacts
-build/
-dist/
-*.o
-*.so
-*.a
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-venv/
-ENV/
-
-# Node.js
+# ===== Node.js (for MCP servers) =====
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
 
-# IDE
-.vscode/
-.idea/
-*.code-workspace
+# ===== Archive & Old Files =====
+# Keep archived directory in git but ignore contents of certain subdirs
+archived/temporary_scripts/__pycache__/
+archived/old_versions/__pycache__/
 
-# OS
+# ===== OS Specific =====
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# Secrets
-secrets/
-*.key
-*.pem
-credentials.json
-kaggle.json
+# ===== Archived =====
+archived/logs/
+archived/scripts/
 
-# Claude Code configuration (private, never push to remote)
-.claude/                # All Claude config is private
-CLAUDE.md               # Claude instructions (private)
-claude_mcp_config.json  # MCP server config (private)
-.venv/                  # Virtual environment
+# ===== Internal Documentation (not for public) =====
+docs/archived/CLAUDE.md
+docs/archived/claude_mcp_config.json
+docs/archived/PROJECT_CLEANUP_PLAN.md
+docs/archived/CLEANUP_REPORT.md
 
-# Competition data (too large for git)
-data/
-*.zip
-sample_submissions.csv  # Kaggle-provided (33MB)
-
-# Output directories (results, submissions, logs)
-outputs/
-results/
-results_*/
-
-# Archive (old experiments and results)
-archive/
-
-# Temporary model files
-catboost_info/
-*.catboost
-*.cbm
-
-# Temporary analysis files
-ANALYSIS_REPORT.md
-CHAMPIONSHIP_PLAN.md
-final_submission.csv
-
-# Submission files (private)
-*_submission.csv
-submission*.csv
-best_model.pth
+# ===== Misc =====
+TODO.txt
+NOTES.md
+*.deb
+README_OLD.md
