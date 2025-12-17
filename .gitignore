@@ -20,6 +20,10 @@ secrets/
 .claude/
 .kaggle.json
 kaggle.json
+.pre-commit-config.yaml
+.github/
+.playwright-mcp/
+pytest.ini
 
 # ===== Competition Data =====
 # Dataset (19GB+ total)
