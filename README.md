@@ -226,6 +226,9 @@ MIT License - See [LICENSE](LICENSE)
 
 ## Acknowledgments
 
+- **Prof. Chien-Chao Tseng (曾建超教授)**: National Yang Ming Chiao Tung University, for guidance and support
+- **Yen-Ting Kuo (郭彥廷學長)**: Winlab, for technical assistance and mentorship
+- **Ficus Sapiens**: For various aspects of support and collaboration
 - **Kaggle & University of Oslo**: For hosting the competition
 - **CatBoost Team**: Excellent gradient boosting library
 - **Community**: Shared insights and discussions
