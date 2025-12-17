@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **TL;DR**: Ranked #52/~500 teams (Private LB: 0.51242) • Public LB: 0.73029 • CatBoost + k-mer features • GPU optimized
+> **TL;DR**: Ranked #52/290 teams (Private LB: 0.51242) • Public LB: 0.73029 • CatBoost + k-mer features • GPU optimized
 
 ---
 
@@ -12,7 +12,7 @@
 
 | Metric | Score | Rank | Note |
 |--------|-------|------|------|
-| **Private LB** | **0.51242** | **#52/~500** | Final ranking |
+| **Private LB** | **0.51242** | **#52/290** | Final ranking |
 | Public LB | 0.73029 | - | V8 model |
 | Public LB (peak) | 0.74006 | - | V5 overfitted |
 
@@ -236,5 +236,5 @@ MIT License - See [LICENSE](LICENSE)
 ---
 
 **Competition**: [AIRR-ML-25 on Kaggle](https://www.kaggle.com/competitions/adaptive-immune-profiling-challenge-2025)
-**Final Ranking**: #52 out of ~500 teams
+**Final Ranking**: #52 out of 290 teams (375 participants)
 **Key Takeaway**: Honest documentation of failure is as valuable as success stories.

@@ -1,6 +1,6 @@
 # AIRR-ML-25 Competition Summary
 
-> TL;DR: Ranked #52/~500 with 0.51242 private LB. Public-private gap of -0.21787 shows severe overfitting despite regularization. Key lesson: public leaderboard can be misleading.
+> TL;DR: Ranked #52/290 teams with 0.51242 private LB. Public-private gap of -0.21787 shows severe overfitting despite regularization. Key lesson: public leaderboard can be misleading.
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Metric | Score | Rank | Note |
 |--------|-------|------|------|
-| **Private LB** | **0.51242** | **#52/~500** | Final ranking |
+| **Private LB** | **0.51242** | **#52/290** | Final ranking |
 | Public LB | 0.73029 | - | V8 model |
 | Public LB (peak) | 0.74006 | - | V5 overfitted |
 
@@ -29,7 +29,7 @@
 **Hosted by**: University of Oslo & Kaggle
 **Prize**: $5,000 + Nature Methods authorship
 **Duration**: December 4-17, 2025
-**Participants**: ~500 teams
+**Participants**: 375 participants (290 teams)
 
 ### Dataset
 
@@ -259,5 +259,5 @@ prediction = mean([model_fold_i.predict(X) for i in range(5)])
 ---
 
 **Final Score**: 0.51242 (Private LB)
-**Final Rank**: #52 / ~500
+**Final Rank**: #52 / 290 teams (375 participants)
 **Key Takeaway**: Honest documentation of failure is as valuable as success stories.

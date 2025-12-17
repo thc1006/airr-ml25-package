@@ -1,6 +1,6 @@
 # AIRR-ML-25 Experiment Log
 
-> TL;DR: 14 versions tested over 13 days. V8 (CatBoost) scored 0.51242 private LB (Rank #52). Severe overfitting despite regularization.
+> TL;DR: 14 versions tested over 13 days. V8 (CatBoost) scored 0.51242 private LB (Rank #52/290 teams). Severe overfitting despite regularization.
 
 ---
 
@@ -129,5 +129,5 @@ Top 10 features:
 ---
 
 **Total Experiments**: 14 versions + 20+ variants
-**Final Result**: Private LB 0.51242 (Rank #52/~500)
+**Final Result**: Private LB 0.51242 (Rank #52/290 teams)
 **Key Takeaway**: Simple + robust > complex + optimized
