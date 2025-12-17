@@ -49,20 +49,62 @@ python main.py
 airr-ml25-package/
 ├── main.py                    # Entry point (run this)
 ├── requirements.txt           # Dependencies
-├── src/
-│   ├── champion_v8.py         # Best model (0.51242 private)
+├── README.md                  # This file
+├── EXPERIMENTS.md             # Complete experiment log (V1-V14)
+├── COMPETITION_SUMMARY.md     # Detailed competition analysis
+├── FINAL_SUMMARY.md           # Lessons learned & reflections
+├── LICENSE                    # MIT License
+├── Makefile                   # Build automation
+│
+├── src/                       # Core source code
+│   ├── champion_v8.py         # Best model (0.51242 private LB)
 │   ├── utils_parallel.py      # Auto hardware optimization
-│   └── airr_ml25/             # Core package
-├── experiments/               # V1-V14 experiments
-│   ├── champion_v5.py         # Best public (0.74006, overfitted)
-│   └── champion_v9.py         # Attention-MIL attempt
+│   └── __init__.py            # Package initialization
+│
+├── experiments/               # Alternative model versions
+│   ├── champion_v5.py         # Best public LB (0.74006, overfitted)
+│   ├── champion_v7.py         # Deep learning attempt
+│   ├── champion_v9.py         # Attention-MIL experiment
+│   └── other_versions/        # V1-V4, V6, V10-V14
+│
 ├── submissions/               # Competition submissions
+│   ├── v8_submission_fixed.csv         # Final submission (0.51242)
+│   ├── v5_submission_*.csv             # V5 submissions
+│   ├── best_submissions/               # Top submissions archive
+│   └── archive/                        # Historical submissions
+│
 ├── analysis/                  # Analysis scripts
+│   ├── smart_ensemble.py              # Ensemble analysis
+│   ├── analyze_dataset7_predictions.py
+│   ├── analyze_public_clones.py
+│   └── dataset7_deep_analysis.py
+│
 ├── tests/                     # Unit tests
-└── docs/
-    ├── EXPERIMENTS.md         # Full experiment log
-    ├── COMPETITION_SUMMARY.md # Detailed analysis
-    └── FINAL_SUMMARY.md       # Lessons learned
+│   ├── test_main.py           # Main entry point tests
+│   ├── conftest.py            # Pytest configuration
+│   └── README.md              # Testing documentation
+│
+├── docs/                      # Documentation
+│   ├── competition_info/      # Official Kaggle competition info
+│   ├── challenge_overview.md  # Competition summary
+│   ├── data_format.md         # Dataset format specifications
+│   └── archived/              # Historical documentation
+│
+├── archived/                  # Archived experiments & code
+│   ├── old_versions/          # V1-V4, V6, V10-V14 implementations
+│   ├── temporary_scripts/     # Experimental scripts
+│   ├── failed_experiments/    # Failed approaches
+│   ├── code_modules/          # Old src/ submodules
+│   ├── config_experiments/    # YAML experiment configs
+│   ├── notebooks_reference/   # Jupyter notebook examples
+│   ├── tests_old/             # Old test files
+│   ├── scripts/               # Old bash scripts
+│   └── logs/                  # Training logs
+│
+└── data/                      # Competition data (gitignored)
+    ├── train_datasets/        # 8 training datasets
+    ├── test_datasets/         # 11 test datasets
+    └── sample_submissions.csv # Sample submission format
 ```
 
 ---
