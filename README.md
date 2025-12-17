@@ -41,21 +41,36 @@ A comprehensive solution for the AIRR-ML-25 Kaggle competition, which challenges
 ## 🚀 Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/airr-ml25-package.git
+# 1. Clone the repository
+git clone https://github.com/thc1006/airr-ml25-package.git
 cd airr-ml25-package
 
-# Install dependencies
+# 2. Create virtual environment (recommended)
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# Run the best model (V8)
-python src/champion_v8.py \
-    --train_root ./data/train_datasets \
-    --test_root ./data/test_datasets \
-    --out_path ./v8_submission.csv \
-    --n_jobs 8 \
-    --device cuda
+# 4. Download competition data (requires Kaggle API)
+kaggle competitions download -c adaptive-immune-profiling-challenge-2025
+unzip adaptive-immune-profiling-challenge-2025.zip -d ./data/
+
+# 5. Run the champion V8 pipeline (GPU optimized)
+python main.py
+
+# Alternative: Run champion_v8 directly with custom options
+# GPU with 8 parallel jobs (recommended for RTX 5080/4090):
+python -m src.champion_v8 --n_jobs 8 --device cuda
+
+# CPU only (slower):
+python -m src.champion_v8 --n_jobs -1 --device cpu
 ```
+
+**Expected Results:**
+- Training time: ~2-4 hours on RTX 5080
+- Submission file: `./submissions/v8_submission_<timestamp>.csv`
+- Expected score: Public LB 0.73029, Private LB 0.51242
 
 ---
 
