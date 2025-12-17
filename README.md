@@ -1,420 +1,195 @@
-# AIRR-ML-25: Adaptive Immune Profiling Challenge 2025
+# AIRR-ML-25 Competition Solution
 
-[![Competition](https://img.shields.io/badge/Kaggle-AIRR--ML--25-20BEFF?logo=kaggle)](https://www.kaggle.com/competitions/adaptive-immune-profiling-challenge-2025)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python)](https://www.python.org/)
+[![Kaggle](https://img.shields.io/badge/Competition-AIRR--ML--25-20BEFF?logo=kaggle)](https://www.kaggle.com/competitions/adaptive-immune-profiling-challenge-2025)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **Final Private Leaderboard Score: 0.51242** (Model V8 - Rank #52)
-> **Public Leaderboard Score: 0.73029** (peaked during competition)
-
-A comprehensive solution for the AIRR-ML-25 Kaggle competition, which challenges participants to predict immune states from adaptive immune receptor repertoires (AIRRs) and identify disease-associated receptor sequences.
+> **TL;DR**: Ranked #52/~500 teams (Private LB: 0.51242) • Public LB: 0.73029 • CatBoost + k-mer features • GPU optimized
 
 ---
 
-## 🏆 Competition Results
+## Final Results
 
-| Metric | Score | Model | Details |
-|--------|-------|-------|---------|
-| **Private LB** | **0.51242** | V8 | Final ranking: #52 |
-| **Public LB** | 0.73029 | V8 | Competition peak |
-| **Public LB (Best)** | 0.74006 | V5 | Best public score (overfitted) |
-| **Task A (AUC)** | ~0.51 | V8 | Immune state prediction |
-| **Task B (Jaccard)** | ~0.51 | V8 | Sequence identification |
+| Metric | Score | Rank | Note |
+|--------|-------|------|------|
+| **Private LB** | **0.51242** | **#52/~500** | Final ranking |
+| Public LB | 0.73029 | - | V8 model |
+| Public LB (peak) | 0.74006 | - | V5 overfitted |
 
----
-
-## 📋 Table of Contents
-
-- [Quick Start](#-quick-start)
-- [Competition Overview](#-competition-overview)
-- [Project Structure](#-project-structure)
-- [Best Model (V8)](#-best-model-v8)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Experiments](#-experiments)
-- [Key Features](#-key-features)
-- [Results](#-results)
-- [License](#-license)
+**Key Lesson**: Public-private gap of -0.21787 shows severe overfitting despite regularization.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/thc1006/airr-ml25-package.git
-cd airr-ml25-package
-
-# 2. Create virtual environment (recommended)
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# 3. Install dependencies
+# 1. Setup
+git clone https://github.com/thc1006/airr-ml25-package.git && cd airr-ml25-package
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 4. Download competition data (requires Kaggle API)
+# 2. Get data (19GB)
 kaggle competitions download -c adaptive-immune-profiling-challenge-2025
 unzip adaptive-immune-profiling-challenge-2025.zip -d ./data/
 
-# 5. Run the champion V8 pipeline (GPU optimized)
+# 3. Run (auto-detects GPU/CPU & cores)
 python main.py
 
-# Alternative: Run champion_v8 directly with custom options
-# GPU with 8 parallel jobs (recommended for RTX 5080/4090):
-python -m src.champion_v8 --n_jobs 8 --device cuda
-
-# CPU only (slower):
-python -m src.champion_v8 --n_jobs -1 --device cpu
+# Output: ./submissions/v8_submission_<timestamp>.csv
+# Training time: ~2-4 hours (RTX 5080)
 ```
 
-**Expected Results:**
-- Training time: ~2-4 hours on RTX 5080
-- Submission file: `./submissions/v8_submission_<timestamp>.csv`
-- Expected score: Public LB 0.73029, Private LB 0.51242
+**Hardware**: Auto-detects NVIDIA GPU + optimal CPU cores. No config needed.
 
 ---
 
-## 🎯 Competition Overview
-
-### Challenge Description
-The AIRR-ML-25 challenge focuses on analyzing B-cell and T-cell receptor repertoires to:
-1. **Task A**: Predict immune state (diseased vs. healthy) for each repertoire
-2. **Task B**: Identify the top 50,000 disease-associated receptor sequences per dataset
-
-### Dataset
-- **8 training datasets** with labeled repertoires
-- **11 test datasets** (4,213 repertoires total)
-- **~19.94 GB** total dataset size
-- Multiple disease types: COVID-19, cancer, autoimmune diseases
-
-### Evaluation Metrics
-- **Task A**: ROC-AUC (Area Under the Receiver Operating Characteristic Curve)
-- **Task B**: Jaccard Similarity Index
-- **Combined**: Weighted average of both tasks
-
-### Submission Format
-- 404,213 total rows
-  - 4,213 repertoire predictions (Task A)
-  - 400,000 sequence identifications (50k × 8 datasets, Task B)
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 airr-ml25-package/
-├── README.md                          # This file
-├── COMPETITION_SUMMARY.md             # Detailed competition analysis
-├── EXPERIMENTS.md                     # All experiment records
-├── PROJECT_CLEANUP_PLAN.md            # Project cleanup documentation
-│
-├── src/                               # Core source code
-│   ├── champion_v8.py                 # ⭐ Best model (0.73029)
-│   └── airr_ml25/                     # Base package
-│       ├── config.py                  # Configuration
-│       ├── data.py                    # Data loading
-│       ├── features.py                # Feature engineering
-│       ├── submission.py              # Submission generation
-│       └── models/
-│           └── baseline_logreg.py     # Baseline model
-│
-├── experiments/                       # Alternative models
-│   ├── champion_v5.py                 # Best public LB (0.74006)
-│   ├── champion_v7.py                 # Experimental version
-│   ├── champion_v9.py                 # Latest experimental
-│   └── other_versions/                # V1-V4, V10-V14
-│
-├── analysis/                          # Analysis tools
-│   ├── smart_ensemble.py              # Ensemble strategy
-│   ├── analyze_dataset7_predictions.py
-│   ├── analyze_public_clones.py
-│   └── dataset7_deep_analysis.py
-│
-├── submissions/                       # Competition submissions
-│   ├── v8_submission_fixed.csv        # ⭐ Best submission (0.73029)
-│   ├── best_submissions/              # Top submissions
-│   │   ├── v8_submission_fixed.csv
-│   │   └── v5_best_public.csv
-│   └── archive/                       # Historical submissions
-│
-├── tests/                             # Unit tests
-│   ├── conftest.py
-│   ├── test_catboost.py
-│   ├── test_esm2_extractor.py
-│   └── test_integration_v13.py
-│
-├── docs/                              # Documentation
-│   ├── competition_info/              # Kaggle competition info
-│   ├── technical/                     # Technical documentation
-│   └── archived/                      # Historical documentation
-│
-├── archived/                          # Archived experiments
-│   ├── old_versions/                  # V1-V4, V10-V14
-│   ├── temporary_scripts/             # Experimental scripts
-│   └── failed_experiments/            # Failed attempts
-│
-├── notebooks/                         # Jupyter notebooks
-├── champion_v5_package/               # V5 standalone package
-├── .github/                           # GitHub Actions CI/CD
-├── requirements.txt                   # Python dependencies
-├── Makefile                           # Build automation
-└── main.py                            # Official baseline entry point
+├── main.py                    # Entry point (run this)
+├── requirements.txt           # Dependencies
+├── src/
+│   ├── champion_v8.py         # Best model (0.51242 private)
+│   ├── utils_parallel.py      # Auto hardware optimization
+│   └── airr_ml25/             # Core package
+├── experiments/               # V1-V14 experiments
+│   ├── champion_v5.py         # Best public (0.74006, overfitted)
+│   └── champion_v9.py         # Attention-MIL attempt
+├── submissions/               # Competition submissions
+├── analysis/                  # Analysis scripts
+├── tests/                     # Unit tests
+└── docs/
+    ├── EXPERIMENTS.md         # Full experiment log
+    ├── COMPETITION_SUMMARY.md # Detailed analysis
+    └── FINAL_SUMMARY.md       # Lessons learned
 ```
 
 ---
 
-## ⭐ Best Model (V8)
+## Model V8 (Best Submission)
 
-**File**: `src/champion_v8.py`
-**Score**: 0.73029 (Private Leaderboard)
+**Algorithm**: CatBoost Gradient Boosting (GPU-accelerated)
 
-### Key Features
+**Features** (5000 total):
+- Multi-scale k-mers (k=3,4,5) with TF-IDF
+- V/J gene usage + VJ pairing patterns
+- Clonality metrics (Shannon, Gini, D50)
+- Public clonotype detection
+- CDR3 sequence statistics
 
-#### Feature Engineering
-1. **K-mer Features**
-   - Multi-scale k-mers (k=3, 4, 5)
-   - TF-IDF transformation
-   - N-gram frequency analysis
+**Training**:
+- 5-fold stratified cross-validation
+- L2 regularization (λ=3.0)
+- 1000 trees, depth=6, lr=0.05
+- Early stopping (100 rounds)
 
-2. **V/J Gene Usage**
-   - V gene family distribution
-   - J gene family distribution
-   - VJ gene pairing patterns
+**Cross-Validation**: 0.7318 ± 0.0196 (8 datasets)
 
-3. **Repertoire Statistics**
-   - Sequence length distribution
-   - Shannon entropy (clonal diversity)
-   - Gini coefficient (clonality)
-   - D50 index (top 50% sequences)
+**Why it failed on private LB**: Distribution shift between public/private test sets. CV didn't catch the overfitting.
 
-4. **Advanced Features**
-   - Public clonotype detection
-   - CDR3 physicochemical properties
-   - Template count statistics
+---
 
-#### Model Architecture
-- **Base Model**: CatBoost Gradient Boosting
-- **Training**: GPU-accelerated
-- **Cross-Validation**: 5-fold stratified CV
-- **Feature Selection**: Top 5000 features by importance
+## Experiments Summary
 
-#### Training Command
+14 model versions tested. See [EXPERIMENTS.md](EXPERIMENTS.md) for details.
+
+| Version | Public LB | Private LB | Status | Key Change |
+|---------|-----------|------------|--------|------------|
+| V1-V4 | 0.65-0.69 | - | Failed | Baseline exploration |
+| **V5** | **0.74006** | ~0.50 | Overfit | Complex ensemble |
+| V6 | 0.72 | - | Failed | Simplified V5 |
+| V7 | 0.69 | - | Failed | Deep learning |
+| **V8** | **0.73029** | **0.51242** | Best | CatBoost + regularization |
+| V9-V14 | 0.70-0.73 | - | Failed | Last-minute attempts |
+
+---
+
+## Key Learnings
+
+### What Worked
+- Multi-scale k-mer features (k=3,4,5)
+- V/J gene usage patterns
+- CatBoost with GPU acceleration
+- Stratified cross-validation
+- Biological feature engineering
+
+### What Failed
+- Over-engineering (V5: 8000 features → overfitted)
+- Deep learning (insufficient data)
+- Protein embeddings (ESM-2 too slow)
+- Chasing public leaderboard (misleading)
+- Per-dataset models (didn't generalize)
+
+### Critical Mistake
+
+**Public-Private Gap**: -0.21787 (0.73 → 0.51)
+- Public test set was NOT representative of private
+- Cross-validation couldn't detect this
+- Should have used more conservative validation
+- Lesson: Trust CV > leaderboard
+
+---
+
+## Advanced Usage
+
 ```bash
-python src/champion_v8.py \
-    --train_root ./data/train_datasets \
-    --test_root ./data/test_datasets \
-    --out_path ./submission.csv \
-    --n_jobs 8 \
-    --device cuda \
-    --max_features 5000
+# Check hardware configuration
+python src/utils_parallel.py
+
+# Run with custom settings
+python -m src.champion_v8 --n_jobs 8 --device cuda
+
+# Run specific experiment
+python experiments/champion_v5.py  # Best public LB
+
+# Run tests
+pytest tests/ -v
 ```
-
-### Important Note on Scores
-
-**Public LB vs Private LB Gap**: The model achieved 0.73029 on public LB but dropped to **0.51242 on private LB**, indicating significant overfitting issues. This serves as an important lesson:
-
-1. **Public LB Misleading**: High public scores don't guarantee private performance
-2. **Distribution Shift**: Private test set had different characteristics
-3. **Overfitting Challenge**: Even with regularization, overfitting occurred
-4. **Learning Opportunity**: Final rank #52 teaches the importance of robust validation
 
 ---
 
-## 💻 Installation
+## Documentation
 
-### Requirements
+- **[EXPERIMENTS.md](EXPERIMENTS.md)**: Complete experiment log (V1-V14)
+- **[COMPETITION_SUMMARY.md](COMPETITION_SUMMARY.md)**: Detailed analysis & approach
+- **[FINAL_SUMMARY.md](FINAL_SUMMARY.md)**: Reflections & lessons learned
+
+---
+
+## System Requirements
+
+**Minimum**:
 - Python 3.10+
-- CUDA 11.8+ (for GPU training)
-- 16GB+ RAM
-- 100GB+ disk space (for full dataset)
+- 8GB RAM
+- 4 CPU cores
 
-### Setup
+**Recommended**:
+- Python 3.10+
+- 32GB RAM
+- 8+ CPU cores
+- NVIDIA GPU (16GB VRAM)
 
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Download competition data (requires Kaggle API)
-kaggle competitions download -c adaptive-immune-profiling-challenge-2025
-unzip adaptive-immune-profiling-challenge-2025.zip -d data/
-```
-
-### Dependencies
-
-Key packages:
-- `catboost>=1.2` - Gradient boosting
-- `scikit-learn>=1.3` - ML utilities
-- `pandas>=2.0` - Data manipulation
-- `numpy>=1.24` - Numerical computing
-- `torch>=2.0` - Deep learning (optional)
-
-See `requirements.txt` for full list.
+**Tested On**:
+- RTX 5080 16GB + Ryzen 7 7800X3D (2-4 hours training)
+- CPU-only (8-12 hours training)
 
 ---
 
-## 🔧 Usage
+## License
 
-### Training
-
-```bash
-# Train V8 model (best private LB)
-python src/champion_v8.py \
-    --train_root ./data/train_datasets \
-    --test_root ./data/test_datasets \
-    --out_path ./my_submission.csv
-
-# Train V5 model (best public LB)
-python experiments/champion_v5.py \
-    --train_root ./data/train_datasets \
-    --test_root ./data/test_datasets \
-    --out_path ./v5_submission.csv
-```
-
-### Prediction
-
-```bash
-# Generate predictions using trained model
-python -m airr_ml25.submission \
-    --train-root ./data/train_datasets \
-    --test-root ./data/test_datasets \
-    --out-path ./submission.csv
-```
-
-### Ensemble
-
-```bash
-# Create ensemble from multiple models
-python analysis/smart_ensemble.py \
-    --v8 ./submissions/v8_submission_fixed.csv \
-    --v5 ./submissions/v5_best_public.csv \
-    --output ./ensemble_submission.csv
-```
+MIT License - See [LICENSE](LICENSE)
 
 ---
 
-## 🧪 Experiments
+## Acknowledgments
 
-See [EXPERIMENTS.md](EXPERIMENTS.md) for detailed experiment logs.
-
-### Model Versions
-
-| Version | Public LB | Private LB | Key Features | Status |
-|---------|-----------|------------|--------------|--------|
-| **V8** | ~0.73 | **0.73029** | CatBoost + robust features | ✅ Best |
-| **V5** | **0.74006** | ~0.72 | Complex ensemble | ⚠️ Overfit |
-| V7 | 0.69294 | N/A | Experimental | ❌ Failed |
-| V9 | ~0.73 | N/A | Deep learning | 🚧 Testing |
-
-### Key Insights
-
-1. **Simpler is Better**: V8's simpler feature set outperformed complex models
-2. **Avoid Overfitting**: Public LB score doesn't always predict private LB
-3. **Biological Features Matter**: V/J gene usage and clonality metrics are crucial
-4. **Cross-Dataset Validation**: Leave-one-dataset-out CV is essential
+- **Kaggle & University of Oslo**: For hosting the competition
+- **CatBoost Team**: Excellent gradient boosting library
+- **Community**: Shared insights and discussions
 
 ---
 
-## 🎨 Key Features
-
-### Feature Engineering Pipeline
-
-```python
-from src.champion_v8 import ChampionV8
-
-# Initialize model
-model = ChampionV8(n_jobs=8, device='cuda')
-
-# Train on all datasets
-model.fit('./data/train_datasets')
-
-# Generate predictions
-predictions = model.predict_proba('./data/test_datasets')
-
-# Identify important sequences
-sequences = model.identify_associated_sequences(
-    './data/train_datasets',
-    top_k=50000
-)
-```
-
-### Custom Feature Extraction
-
-```python
-from airr_ml25.features import extract_kmer_features, compute_vj_usage
-
-# Extract k-mer features
-kmer_features = extract_kmer_features(repertoires, k=4)
-
-# Compute V/J gene usage
-vj_features = compute_vj_usage(repertoires)
-```
-
----
-
-## 📊 Results
-
-### Leaderboard Progression
-
-| Date | Version | Public LB | Private LB | Notes |
-|------|---------|-----------|------------|-------|
-| Dec 15 | V5 | 0.74006 | ~0.72 | Peak public score |
-| Dec 16 | V8 | ~0.73 | **0.73029** | Final best |
-| Dec 16 | V9 | ~0.73 | N/A | Experimental |
-
-### Cross-Validation Results
-
-Dataset-level performance (V8):
-- Dataset 1: AUC 0.75 ± 0.02
-- Dataset 2: AUC 0.73 ± 0.03
-- Dataset 3: AUC 0.76 ± 0.02
-- Dataset 4: AUC 0.71 ± 0.04
-- Dataset 5: AUC 0.74 ± 0.03
-- Dataset 6: AUC 0.72 ± 0.03
-- Dataset 7: AUC 0.70 ± 0.05
-- Dataset 8: AUC 0.73 ± 0.04
-
----
-
-## 📚 Documentation
-
-- [COMPETITION_SUMMARY.md](COMPETITION_SUMMARY.md) - Detailed competition analysis
-- [EXPERIMENTS.md](EXPERIMENTS.md) - All experiment records and results
-- [PROJECT_CLEANUP_PLAN.md](PROJECT_CLEANUP_PLAN.md) - Repository organization
-- `docs/` - Additional technical documentation
-
----
-
-## 🤝 Contributing
-
-This is a competition solution repository. While active development has concluded, issues and discussions are welcome.
-
----
-
-## 📜 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **Kaggle** for hosting the AIRR-ML-25 competition
-- **University of Oslo** for providing the dataset and evaluation framework
-- **CatBoost team** for the excellent gradient boosting library
-- **Adaptive Immune Profiling Challenge organizers** for the interesting problem
-
----
-
-## 📧 Contact
-
-For questions or discussions:
-- Open an issue on GitHub
-- Competition discussion: [Kaggle Discussion Forum](https://www.kaggle.com/competitions/adaptive-immune-profiling-challenge-2025/discussion)
-
----
-
-**Built with ❤️ for the AIRR-ML-25 Challenge**
+**Competition**: [AIRR-ML-25 on Kaggle](https://www.kaggle.com/competitions/adaptive-immune-profiling-challenge-2025)
+**Final Ranking**: #52 out of ~500 teams
+**Key Takeaway**: Honest documentation of failure is as valuable as success stories.
